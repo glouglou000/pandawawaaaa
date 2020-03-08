@@ -1,5 +1,5 @@
 # pandawawaaaa
 
-- coté
+- side mouth
 
-- raising
+- forehead
