@@ -398,10 +398,21 @@ while True:
         zero = 0
         _, _, width_head, height_head = head_box_head
 
-        a(zero)
-        b(zero, width_head, height_head)
-        c(zero, width_head)
-        d(zero, height_head)
+        aa = TH(target=a(zero))
+        bb = TH(target=b(zero, width_head, height_head))
+        cc = TH(target=c(zero, width_head))
+        dd = TH(target=d(zero, height_head))
+
+
+        aa.start()
+        bb.start()
+        cc.start()
+        dd.start()
+
+        aa.join()
+        bb.join()
+        cc.join()
+        dd.join()
 
 
 
