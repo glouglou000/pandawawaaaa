@@ -1,7 +1,7 @@
 import cv2
 import math
 import numpy as np
-import threading
+from threading import Thread as TH
 
 #Les boucles qui ralentissent
 #Les zones mals définient
@@ -60,7 +60,7 @@ def masks_from_convex(convexPoints, threshold, frame):
 
     crop_frame     = frame[y:y+h, x:x+w]
 
-    #cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 1)
+    cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 1)
     return crop_threhsold, crop_frame, box_crop
 
 
@@ -199,15 +199,122 @@ def localisation_wrinkle(crop_threhsold, box_crop,
 
 
 
+def wrinkle_function(head_box_head, data_points, data_feature, landmarks,
+                     frame_head, threshold, mode1, mode2, number):
+
+    _, _, width_head, height_head = head_box_head
+
+    adding, points = data_points
+
+    convexPoints = recuperate_coordinates(points, adding, landmarks, frame_head, mode1)
+    crop_threhsold, crop_frame, box_crop = masks_from_convex(convexPoints, threshold, frame_head)
+
+
+    maxContour, minContour, minLength, maxLength, minWidth, maxWidth = data_feature
+
+    localisation_wrinkle(crop_threhsold, box_crop,
+                         minContour, maxContour, minLength,
+                         maxLength, minWidth, maxWidth, mode2, crop_frame, number)
+
+
+def skin_detector(frame):
+
+
+    min_YCrCb = np.array([0,140,85],np.uint8)
+    max_YCrCb = np.array([240,180,130],np.uint8)
+    imageYCrCb = cv2.cvtColor(frame, cv2.COLOR_BGR2YCR_CB)
+    skinRegionYCrCb = cv2.inRange(imageYCrCb,min_YCrCb,max_YCrCb)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
+    skinMask = cv2.dilate(skinRegionYCrCb, kernel, iterations = 2)
+    skinMask = cv2.morphologyEx(skinMask, cv2.MORPH_CLOSE, kernel)
+
+    skinYCrCb = cv2.bitwise_and(frame, frame, mask = skinMask)
+
+    return skinYCrCb
+
+
+
+#------- Raise anatomy --------
+
+def raising_part(landmarks_head, picture, head_box_head, points_list, adding_height, add_width):
+    """Put white on region interest on a gray picture"""
+
+    #Add height px of our y points.
+    width, height = head_box_head[2:]
+    add_height_to_points = int(height * adding_height)
+    add_width_to_points = int(height * add_width)
+    
+    #Recuperate landmarks 1:-1
+    region = [(landmarks_head.part(n).x, landmarks_head.part(n).y - add_height_to_points)
+              for n in points_list[1: -1]]
+
+    #First and last landmark (for hide on eyes)
+    region1 = [(landmarks_head.part(points_list[0]).x + add_width_to_points,
+                landmarks_head.part(points_list[0]).y)]
+    region2 = [(landmarks_head.part(points_list[-1]).x + add_width_to_points,
+                landmarks_head.part(points_list[-1]).y)]
+
+    #Make one list
+    region1 += region
+    region1 += region2
+
+    #Transfor points into array
+    region = np.array(region1)
+    #Fill the region in white color on a gray picture
+    cv2.fillPoly(picture, [region], (255, 255, 255))
 
 
 
 
 
+def raising(landmarks_head, threshold, threshold1, head_box_head):
+
+    raising_on_eyes1 = TH(target=raising_part(landmarks_head, threshold,
+                                                head_box_head, [17, 18, 19, 20, 21],
+                                                 0.055, 0))# 5 91
+
+    raising_on_eyes2 = TH(target=raising_part(landmarks_head, threshold,
+                                                head_box_head, [22, 23, 24, 25, 26],
+                                                0.055, 0))
+
+    raising_mouse = TH(target=raising_part(landmarks_head, threshold, head_box_head,
+                                                [31, 48, 57, 54, 35],
+                                                0, 0))
+
+    raising_eye1 = TH(target=raising_part(landmarks_head, threshold1, head_box_head,
+                                            [36, 37, 38, 39, 40, 41],
+                                            0, 0))
+
+    raising_eye2 = TH(target=raising_part(landmarks_head, threshold1, head_box_head,
+                                            [42, 43, 44, 45, 46, 47],
+                                            0, -0.5))
+
+    raising_nose = TH(target=raising_part(landmarks_head, threshold, head_box_head,
+                                             [31, 32, 33, 34, 35, 28],
+                                             0, 0.5))
+
+    raising_eye3 = TH(target=raising_part(landmarks_head, threshold, head_box_head,
+                                            [36, 37, 38, 39, 40, 41],
+                                            0, 0))
+
+    raising_eye4 = TH(target=raising_part(landmarks_head, threshold, head_box_head,
+                                            [42, 43, 44, 45, 46, 47],
+                                            0, -0.5))
+
+    raising_on_eyes1.start()
+    raising_on_eyes2.start()
+    raising_mouse.start()
+    raising_eye1.start()
+    raising_eye2.start()
+    raising_nose.start()
 
 
-
-
-
+    raising_on_eyes1.join()
+    raising_on_eyes2.join()
+    raising_mouse.join()
+    raising_eye1.join()
+    raising_eye2.join()
+    raising_nose.join()
 
 
