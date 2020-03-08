@@ -28,7 +28,6 @@ from figure.wrinkle.ride_utils import raising
 
 from figure.wrinkle.ride_utils import recuperate_coordinates
 from figure.wrinkle.ride_utils import masks_from_convex
-from figure.wrinkle.ride_utils import masks_from_box
 from figure.wrinkle.ride_utils import localisation_wrinkle
 
 
@@ -67,13 +66,14 @@ t2.join()
 
 from video_capture_utils.video_capture_utils import resize_face, resize_eyes
 
-video = video_path.format("e.mp4")
+video = video_path.format("h.mp4")
 cap = cv2.VideoCapture(video)
 
 
-#face_division = search_video_size(video, predictor, detector, dlib_model, 93)
-face_division = 2.899999999999998
-face_division = 1.650000000000001
+
+face_division = search_video_size(video, predictor, detector, dlib_model, 93)
+#face_division = 2.899999999999998
+#face_division = 1.650000000000001
 
 
 
@@ -154,7 +154,7 @@ def wrinkle_under_eye(zero, height_head):
                                    ((36, 36), (39, 39), (36, 36), (39, 39)))
 
     data_points_under_eye_right = (((0, add_height), (0, add_height),
-                                   (0, 2 * add_height), (0, 2 * add_height)),
+                                   (add_height, 2 * add_height), (0, 2 * add_height)),
                                    ((42, 42), (45, 45), (42, 42), (45, 45)))
 
     data_feature_under_eyes  = (0.8, 0.05, zero, zero, zero, zero)
@@ -252,6 +252,8 @@ while True:
 
     frame_head, gray_head = resize_eyes(frame, face_division)
 
+
+    
     #---------Landmarks------------
     thread_landmarks1 = TH(target=landmarks62(gray_head, predictor, detector))
     thread_landmarks2 = TH(target=landmarks81(gray_head, predictor1, detector1))
@@ -288,19 +290,19 @@ while True:
 
 ##        th_wrinkle_crow = TH(target=wrinkle_crow_feet(zero))
 ##        th_beetween     = TH(target=wrinkle_beetween_eye(zero, width_head, height_head))
-##        th_side_mouth   = TH(target=wrinkle_side_mouth(zero, width_head))
-        th_under_eyes   = TH(target=wrinkle_under_eye(zero, height_head))
-
-
-        #th_wrinkle_crow.start()
-        #th_beetween.start()
-        #th_side_mouth.start()
-        th_under_eyes.start()
-
-        #th_wrinkle_crow.join()
-        #th_beetween.join()
-        #th_side_mouth.join()
-        th_under_eyes.join()
+        th_side_mouth   = TH(target=wrinkle_side_mouth(zero, width_head))
+##        th_under_eyes   = TH(target=wrinkle_under_eye(zero, height_head))
+##
+##
+##        th_wrinkle_crow.start()
+##        th_beetween.start()
+        th_side_mouth.start()
+##        th_under_eyes.start()
+##
+##        th_wrinkle_crow.join()
+##        th_beetween.join()
+        th_side_mouth.join()
+##        th_under_eyes.join()
 
 
 
