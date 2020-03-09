@@ -66,33 +66,69 @@ t2.join()
 
 from video_capture_utils.video_capture_utils import resize_face, resize_eyes
 
-video = video_path.format("h.mp4")
+video = video_path.format("e.mp4")
 cap = cv2.VideoCapture(video)
 
 
 
-face_division = search_video_size(video, predictor, detector, dlib_model, 93)
+#face_division = search_video_size(video, predictor, detector, dlib_model, 93)
 #face_division = 2.899999999999998
-#face_division = 1.650000000000001
+face_division = 1.650000000000001
 
 
 
 
 def wrinkle_crow_feet(zero):
 
-    #crow feet 
-    data_points_crow_right = ( ( (0, 0), (0, 0), (0, 0) ), ( (36, 37), (17, 37), (36, 31), (0, 17) ) )
+    """
+    Dection of the wrinkle situate on the side of the eye.
+    Define region interest from landmarks and feature requiered
+
+    data_points's composed by: incrementation of region and landmarks
+    coordinates
+
+    After we call 2 thread for the two eyes wrinkles.
+
+    """
+
+    #Landmarks region of the wrinkle interest.
+    data_points_crow_right = ( ( (0, 0), (0, 0), (0, 0) ), ( (36, 37), (17, 37), (36, 31), (0, 17)  ) )
     data_points_crow_left  = ( ( (0, 0), (0, 0), (0, 0) ), ( (45, 44), (26, 44), (45, 35), (16, 26) ) )
+
+    #Features required for have a wrinkle.
     data_feature_crow      = (0.8, 0.003, 0.26 , zero, 0.28, zero)
 
 
-    #right.
-    t1 = TH(target=wrinkle_function(head_box_head, data_points_crow_right, data_feature_crow,
-                                landmarks_head, frame_head, threshold, "middle", "length_or_width", 4))
+    #Right side.
 
-    #left.
+    """
+    We need the head_box_head for estimate feature,
+    data_points_crow_right for localise the area of wrinkle,
+    data_feature_crow for define the wrinkle,
+    landmarks_head for obtain coordinates,
+    frame_head for displaying the wrinkle on the frame,
+    threshold for have the threshold,
+    mode 1 here's middle where we make a mean of 2 landmarks,
+    length_or_width's the second mode for define condition of features dimention,
+    and the number, here 4 for define how wrinkle we need for say wrinkles appear.
+    """
+
+    #aa = Detection(head_box_head, data_points_crow_right,
+                                    #data_feature_crow, landmarks_head,
+                                    #frame_head, threshold, "middle", "length_or_width", 4))
+    #aa.wrinkle_function()
+    #ab = TH(target=aa)
+    ##ab.start()
+    ##ab.join()
+    
+    t1 = TH(target=wrinkle_function(head_box_head, data_points_crow_right,
+                                    data_feature_crow, landmarks_head,
+                                    frame_head, threshold, "middle", "length_or_width", 4))
+
+    #Left side.
     t2 = TH(target=wrinkle_function(head_box_head, data_points_crow_left, data_feature_crow,
-                     landmarks_head, frame_head, threshold, "middle", "length_or_width", 4))
+                                     landmarks_head, frame_head, threshold,
+                                    "middle", "length_or_width", 4))
 
     t1.start()
     t2.start()
@@ -102,6 +138,24 @@ def wrinkle_crow_feet(zero):
     
 
 def wrinkle_beetween_eye(zero, width_head, height_head):
+    """
+    Dection of the wrinkle situate beetween the eyes.
+    Define region interest from landmarks and feature requiered
+
+    data_points's composed by: incrementation of region and landmarks
+    coordinates
+
+    After we call 2 thread for the two sides.
+
+
+    For have region of wrinkle, we increment region in comparaison of
+    the head box measure.
+
+    We define the wrinkle feature from the length method. We
+    search the length wrinkle > width wrinkle.
+    for have a form like "l l"
+    """
+
 
     #Beetween eyes.
     adding_height = int(height_head * 0.09)   #5 de 74
@@ -120,6 +174,24 @@ def wrinkle_beetween_eye(zero, width_head, height_head):
 
 
 def wrinkle_side_mouth(zero, width_head):
+
+    """
+    Dection of the wrinkle situate beetween the nose and the mouse.
+    Define region interest from landmarks and feature requiered
+
+    data_points's composed by: incrementation of region and landmarks
+    coordinates
+
+    After we call 2 thread for the two sides.
+
+    For have region of wrinkle, we increment region in comparaison of
+    the width head box measure.
+
+    Here we use the method lengthWidth who's define wrinkle
+    in function of length and width feature.
+
+    """
+
 
     #side mouth
     add1 = int(width_head * 0.12) # 10 de 87 x1
@@ -146,6 +218,21 @@ def wrinkle_side_mouth(zero, width_head):
 
 
 def wrinkle_under_eye(zero, height_head):
+
+    """
+    Dection of the wrinkle situate under the eyes.
+    Define region interest from landmarks and feature requiered
+
+    data_points's composed by: incrementation of region and landmarks
+    coordinates
+
+    After we call 2 thread for the two sides.
+
+    """
+
+
+
+
     add_height = int(height_head * 0.1) #8 de 85
 
     #under
@@ -206,6 +293,7 @@ def threshold_filter(gray_head):
     threshold = cv2.adaptiveThreshold(gray_head, 255, mode, cv2.THRESH_BINARY,11, 2)
     threshold1 = cv2.adaptiveThreshold(gray_head, 255, cv2.ADAPTIVE_THRESH_MEAN_C,\
                 cv2.THRESH_BINARY,3,5)
+
 
 
 frame_skin = ""
@@ -284,7 +372,7 @@ while True:
         raising(landmarks_head, threshold, threshold1, head_box_head)
 
 
-        
+ 
         zero = 0
         _, _, width_head, height_head = head_box_head
 
