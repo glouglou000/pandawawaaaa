@@ -4,247 +4,312 @@ import numpy as np
 from threading import Thread as TH
 
 
-def make_line(thresh):
-    """We make line for detect more than one area
-    with border, on eyelashes is paste to the border"""
 
-    cv2.line(thresh, (0, 0), (0, thresh.shape[0]), (255, 255, 255), 2)
-    cv2.line(thresh, (0, 0), (thresh.shape[1], 0), (255, 255, 255), 2)
-    cv2.line(thresh, (thresh.shape[1], 0), (thresh.shape[1], thresh.shape[0]), (255, 255, 255), 2)
-    cv2.line(thresh, (0,  thresh.shape[0]), (thresh.shape[1], thresh.shape[0]), (255, 255, 255), 2)
+class Utils:
+    def __init__(self, thresh, frame):
+        pass
 
-    return thresh
+    @staticmethod
+    def make_line(thresh):
+        """We make line for detect more than one area
+        with border, on eyelashes is paste to the border"""
 
+        cv2.line(thresh, (0, 0), (0, thresh.shape[0]), (255, 255, 255), 2)
+        cv2.line(thresh, (0, 0), (thresh.shape[1], 0), (255, 255, 255), 2)
+        cv2.line(thresh, (thresh.shape[1], 0), (thresh.shape[1], thresh.shape[0]), (255, 255, 255), 2)
+        cv2.line(thresh, (0,  thresh.shape[0]), (thresh.shape[1], thresh.shape[0]), (255, 255, 255), 2)
 
-def skin_detector(frame):
+        return thresh
 
+    @staticmethod
+    def skin_detector(frame):
 
-    min_YCrCb = np.array([0,140,85],np.uint8)
-    max_YCrCb = np.array([240,180,130],np.uint8)
-    imageYCrCb = cv2.cvtColor(frame, cv2.COLOR_BGR2YCR_CB)
-    skinRegionYCrCb = cv2.inRange(imageYCrCb,min_YCrCb,max_YCrCb)
+        min_YCrCb = np.array([0,140,85],np.uint8)
+        max_YCrCb = np.array([240,180,130],np.uint8)
+        imageYCrCb = cv2.cvtColor(frame, cv2.COLOR_BGR2YCR_CB)
+        skinRegionYCrCb = cv2.inRange(imageYCrCb,min_YCrCb,max_YCrCb)
 
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
-    skinMask = cv2.dilate(skinRegionYCrCb, kernel, iterations = 2)
-    skinMask = cv2.morphologyEx(skinMask, cv2.MORPH_CLOSE, kernel)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
+        skinMask = cv2.dilate(skinRegionYCrCb, kernel, iterations = 2)
+        skinMask = cv2.morphologyEx(skinMask, cv2.MORPH_CLOSE, kernel)
 
-    skinYCrCb = cv2.bitwise_and(frame, frame, mask = skinMask)
+        skinYCrCb = cv2.bitwise_and(frame, frame, mask = skinMask)
 
-    return skinYCrCb
+        return skinYCrCb
 
 
+    @staticmethod
+    def extremums(c):
+        """Recuperate left, right top and bottom extemums corner's"""
 
-def extremums(c):
-    """Recuperate left, right top and bottom extemums corner's"""
+        xe = tuple(c[c[:, :, 0].argmin()][0])  #left
+        ye = tuple(c[c[:, :, 1].argmin()][0])  #right
+        we = tuple(c[c[:, :, 0].argmax()][0])
+        he = tuple(c[c[:, :, 1].argmax()][0])  #bottom
 
-    xe = tuple(c[c[:, :, 0].argmin()][0])  #left
-    ye = tuple(c[c[:, :, 1].argmin()][0])  #right
-    we = tuple(c[c[:, :, 0].argmax()][0])
-    he = tuple(c[c[:, :, 1].argmax()][0])  #bottom
+        return xe, ye, we, he
 
-    return xe, ye, we, he
 
 
+class MakeArea:
+    def __init__(self, data_points_wrinkle, data_feature_wrinkle, adding, landmarks, frame, mode,
+                 threshold):
+ 
+        self.data_points  = data_points_wrinkle
+        self.data_feature = data_feature_wrinkle
+        self.adding       = self.adding
+        self.landmarks    = self.landmarks
+        self.frame        = frame
+        self.mode         = mode
+        self.threshold    = threshold
 
-def recuperate_coordinates(points, adding, landmarks, frame, mode):
-    """Here we recuperate coordinate of landmarks under convex area.
-    middle mode's mean of 2 landmarks"""
 
-    if mode == "middle":
-        point  = points[-1]
-        points = points[:-1]
+    @classmethod
+    def recuperate_coordinates(cls):
+        """Here we recuperate coordinate of landmarks under convex area.
+        middle mode's mean of 2 landmarks"""
 
-    area_landmarks = [(landmarks.part(pts[0]).x + add[0],
-                       landmarks.part(pts[1]).y + add[1])
+        if mode == "middle":
+            point  = points[-1]
+            self.points = .points[:-1]
 
-                      for pts, add in zip(points, adding)]
+        area_landmarks = [(self.landmarks.part(pts[0]).x + add[0],
+                           self.landmarks.part(pts[1]).y + add[1])
+                          for pts, add in zip(self.points, self.adding)]
 
-    if mode == "middle":
-        midle_point = landmarks.part(point[0]).x + landmarks.part(point[1]).x
-        midle_point = int(midle_point / 2)
-        area_landmarks += [(midle_point, landmarks.part(point[0]).y)]
+        if self.mode == "middle":
+            midle_point = self.landmarks.part(point[0]).x + self.landmarks.part(point[1]).x
+            midle_point = int(midle_point / 2)
+            area_landmarks += [(midle_point, self.landmarks.part(self.point[0]).y)]
 
+        self.convexPoints = cv2.convexHull(np.array(area_landmarks))
+        #cv2.drawContours(frame, [convexHull], -1, (0, 0, 255), 1)    
 
-    convexHull = cv2.convexHull(np.array(area_landmarks))
-    #cv2.drawContours(frame, [convexHull], -1, (0, 0, 255), 1)    
+        return self.convexPoints
 
-    return convexHull
 
+    @classmethod
+    def masks_from_convex(cls):
+        """Make a mask of the region convex interest from the frame.
+        Make a box of the mask"""
 
-def masks_from_convex(convexPoints, threshold, frame):
-    """Make a mask of the region convex interest from the frame.
-    Make a box of the mask"""
+        height_frame, width_frame = frame.shape[:2]
+        black_frame = np.zeros((height_frame, width_frame), np.uint8)
+        mask = np.full((height_frame, width_frame), 255, np.uint8)
+        cv2.fillPoly(mask, [convexPoints], (0, 0, 255))
 
-    height_frame, width_frame = frame.shape[:2]
-    black_frame = np.zeros((height_frame, width_frame), np.uint8)
-    mask = np.full((height_frame, width_frame), 255, np.uint8)
-    cv2.fillPoly(mask, [convexPoints], (0, 0, 255))
+        cv2.drawContours(self.frame, [convexPoints], -1, (0, 0, 255), 1)
+        mask_threhsold = cv2.bitwise_not(black_frame, self.threshold.copy(), mask=mask)
 
-    cv2.drawContours(frame, [convexPoints], -1, (0, 0, 255), 1)
-    mask_threhsold = cv2.bitwise_not(black_frame, threshold.copy(), mask=mask)
+        self.box_crop = cv2.boundingRect(convexPoints)
+        x ,y, w, h = self.box_crop
 
-    box_crop = cv2.boundingRect(convexPoints)
-    x ,y, w, h = box_crop
+        self.crop_threhsold = mask_threhsold[y:y+h, x:x+w]
+        self.crop_threhsold = make_line(crop_threhsold)
 
-    crop_threhsold = mask_threhsold[y:y+h, x:x+w]
-    crop_threhsold = make_line(crop_threhsold)
+        self.crop_frame     = frame[y:y+h, x:x+w]
 
-    crop_frame     = frame[y:y+h, x:x+w]
+        #cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 1)
 
-    #cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 1)
+        return crop_threhsold, crop_frame, box_crop
 
-    return crop_threhsold, crop_frame, box_crop
 
 
+class Detection:
+    def __init__(self, data_points_wrinkle, data_feature_wrinkle,
+                 adding, landmarks, frame, mode, threshold,
+                 crop_threshold, box_crop, minContour, maxContour, minLength,
+                 maxLength, minWidth, maxWidth, mode, crop_frame, wrinkle_number):
 
-def condition_length(longueur, largeur, minLength,
-                     maxLength, crop_frame, he, ye, wrinkles):
-    """Recuperate wrinkle if length > width"""
+        MakeArea.__init__(self, data_points_wrinkle, data_feature_wrinkle,
+                          adding, landmarks, frame, mode, threshold)
 
-    if longueur > largeur and\
-       minLength < longueur < maxLength:
-        wrinkles.append((he, ye))
+        self.crop_threhsold  = crop_threhsold
+        self.box_crop        = box_crop
+        self.minContour      = minContour
+        self.maxContour      = maxContour
+        self.minLength       = minLength
+        self.maxLength       = maxLength
+        self.minWidth        = minWidth
+        self.maxWidth        = maxWidth
+        self.mode            = mode
+        self.crop_frame      = crop_frame
+        self.wrinkle_number  = wrinkle_number
+        
 
+    @classmethod
+    def condition_length(cls, longueur, largeur, minLength,
+                         maxLength, crop_frame, he, ye, wrinkles):
+        """Recuperate wrinkle if length > width"""
 
-def condition_width(largeur, longueur, minWidth,
-                    maxWidth, crop_frame, xe, we, wrinkles):
-    """Recuperate wrinkle if width > length"""
+        if longueur > largeur and\
+           minLength < longueur < maxLength:
+            wrinkles.append((he, ye))
 
-    if largeur > longueur and\
-        minWidth < largeur < maxWidth:
-        cv2.line(crop_frame, xe, we, (0, 0, 255), 1)
+    @classmethod
+    def condition_width(cls, largeur, longueur, minWidth,
+                        maxWidth, crop_frame, xe, we):
+        """Recuperate wrinkle if width > length"""
 
+        if largeur   > longueur and\
+            minWidth < largeur < maxWidth:
+            cv2.line(crop_frame, xe, we, (0, 0, 255), 1)
 
-def condition_lengthWidth(maxLength, longueur, minLength, maxWidth,
-                          largeur, minWidth, crop_frame, he, ye, wrinkles):
+    @classmethod
+    def condition_lengthWidth(cls, maxLength, longueur, minLength, maxWidth,
+                              largeur, minWidth, crop_frame, he, ye):
 
-    """Recuperate wrinkle if width's and length are in interval."""
+        """Recuperate wrinkle if width's and length are in interval."""
 
-    if maxLength > longueur > minLength and\
-        maxWidth > largeur > minWidth:
-        cv2.line(crop_frame, he, ye, (0, 0, 255), 1)
+        if maxLength > longueur > minLength and\
+            maxWidth > largeur  > minWidth:
+            cv2.line(crop_frame, he, ye, (0, 0, 255), 1)
 
+    @classmethod
+    def condition_length_width(cls, longueur, minLength, largeur,
+                               crop_frame, xe, ye, we, he, wrinkles):
 
-def condition_length_width(longueur, minLength, largeur,
-                           crop_frame, xe, ye, we, he, wrinkles_list):
+        """Recuperate wrinkle if width > length
+        and length > width and < to minLength."""
 
-    """Recuperate wrinkle if width > length
-    and length > width and < to minLength."""
+        if largeur > longueur:
+            wrinkles.append((we, xe))
 
-    if largeur > longueur:
-        wrinkles_list.append((we, xe))
+        elif longueur > largeur and longueur < minLength:
+            wrinkles.append((he, ye))
 
-    elif longueur > largeur and longueur < minLength:
-        wrinkles_list.append((he, ye))
+    @classmethod
+    def localisation_wrinkle(cls, crop_threhsold, box_crop,
+                             minContour, maxContour, minLength,
+                             maxLength, minWidth, maxWidth, mode,
+                             crop_frame, wrinkle_number):
 
 
+        x ,y, w, h = self.box_crop
 
-def localisation_wrinkle(crop_threhsold, box_crop,
-                         minContour, maxContour, minLength,
-                         maxLength, minWidth, maxWidth, mode, crop_frame, wrinkle_number):
+        wrinkles_list = []
 
+        max_contour = int((w * h) * self.maxContour)
+        min_contour = int((w * h) * self.minContour)
 
-    x ,y, w, h = box_crop
+        maxLength = int(h * self.maxLength)
+        minLength = int(h * self.minLength)
 
-    wrinkles_list = []
+        contours, _ = cv2.findContours(self.crop_threhsold, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        for c in contours:
 
-    max_contour = int((w * h) * maxContour)
-    min_contour = int((w * h) * minContour)
 
-    maxLength = int(h * maxLength)
-    minLength = int(h * minLength)
+            if self.min_contour < cv2.contourArea(c) < self.max_contour:
+                xe, ye, we, he = Utils.extremums(c)
+                self.largeur  = we[0] - xe[0]
+                self.longueur = he[1] - ye[1]
 
-    contours, _ = cv2.findContours(crop_threhsold, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    for c in contours:
+                if mode == "length":
+                     cls.condition_length(self.longueur, self.largeur, self.minLength,
+                                      self.maxLength, self.crop_frame, he, ye, wrinkles_list)
 
+                elif mode == "width":
+                    cls.condition_width(largeur, longueur, minWidth,
+                                    maxWidth, crop_frame, xe, we, wrinkles_list)
+       
+                elif mode == "lengthWidth":
+                    cls.condition_lengthWidth(self.maxLength, self.longueur, self.minLength,
+                                          self.maxWidth, self.largeur, self.minWidth,
+                                          self.crop_frame, he, ye, wrinkles_list)
 
-        if min_contour < cv2.contourArea(c) < max_contour:
-            xe, ye, we, he = extremums(c)
-            largeur  = we[0] - xe[0]
-            longueur = he[1] - ye[1]
+                elif mode == "left":   
+                    cv2.line(crop_frame, (we[0], ye[1]), (xe[0], he[1]), (0, 255, 0), 1)
 
-            if mode == "length":
-                 condition_length(longueur, largeur, minLength,
-                                  maxLength, crop_frame, he, ye, wrinkles_list)
+                elif mode == "right":
+                    cv2.line(crop_frame, (xe[0], ye[1]), (we[0], he[1]), (0, 255, 255), 1)
 
-            elif mode == "width":
-                condition_width(largeur, longueur, minWidth,
-                                maxWidth, crop_frame, xe, we, wrinkles_list)
-   
-            elif mode == "lengthWidth":
-                condition_lengthWidth(maxLength, longueur, minLength, maxWidth,
-                                     largeur, minWidth, crop_frame, he, ye, wrinkles_list)
+                elif mode == "length_or_width":
+                    cls.condition_length_width(self.longueur, self.minLength, self.largeur,
+                                           self.crop_frame, xe, ye, we, he, wrinkles_list)
 
-            elif mode == "left":   
-                cv2.line(crop_frame, (we[0], ye[1]), (xe[0], he[1]), (0, 255, 0), 1)
 
-            elif mode == "right":
-                cv2.line(crop_frame, (xe[0], ye[1]), (we[0], he[1]), (0, 255, 255), 1)
+        if len(wrinkles_list) >= self.wrinkle_number:
+            [cv2.line(crop_frame, i[0], i[1], (0, 0, 255), 1) for i in wrinkles_list]
 
-            elif mode == "length_or_width":
-                condition_length_width(longueur, minLength, largeur,
-                                       crop_frame, xe, ye, we, he, wrinkles_list)
 
 
+    @classmethod
+    def wrinkle_function(cls, head_box_head, data_points, data_feature, landmarks,
+                         frame_head, threshold, mode1, mode2, number):
 
-    if len(wrinkles_list) >= wrinkle_number:
-        [cv2.line(crop_frame, i[0], i[1], (0, 0, 255), 1) for i in wrinkles_list]
+        _, _, width_head, height_head = head_box_head
 
+        adding, points = data_points
 
+        convexPoints = cls.recuperate_coordinates(points, adding, landmarks, frame_head, mode1)
+        crop_threhsold, crop_frame, box_crop = cls.masks_from_convex(convexPoints, threshold, frame_head)
 
 
-def wrinkle_function(head_box_head, data_points, data_feature, landmarks,
-                     frame_head, threshold, mode1, mode2, number):
+        maxContour, minContour, minLength, maxLength, minWidth, maxWidth = data_feature
 
-    _, _, width_head, height_head = head_box_head
-
-    adding, points = data_points
-
-    convexPoints = recuperate_coordinates(points, adding, landmarks, frame_head, mode1)
-    crop_threhsold, crop_frame, box_crop = masks_from_convex(convexPoints, threshold, frame_head)
-
-
-    maxContour, minContour, minLength, maxLength, minWidth, maxWidth = data_feature
-
-    localisation_wrinkle(crop_threhsold, box_crop,
-                         minContour, maxContour, minLength,
-                         maxLength, minWidth, maxWidth, mode2, crop_frame, number)
+        cls.localisation_wrinkle(crop_threhsold, box_crop,
+                             minContour, maxContour, minLength,
+                             maxLength, minWidth, maxWidth, mode2, crop_frame, number)
 
 
 
 
 
 #------- Raise anatomy --------
-def raising_part(landmarks_head, picture, head_box_head, points_list, adding_height, add_width):
-    """Put white on region interest on a gray picture"""
 
-    #Add height px of our y points.
-    width, height = head_box_head[2:]
-    add_height_to_points = int(height * adding_height)
-    add_width_to_points = int(width * add_width)
+class Raise_region:
     
-    #Recuperate landmarks 1:-1
-    region = [(landmarks_head.part(n).x, landmarks_head.part(n).y - add_height_to_points)
-              for n in points_list[1: -1]]
+    def __init__(self, landmarks_head, picture, head_box_head,
+                 points_list, adding_height, add_width):
 
-    #First and last landmark (for hide on eyes)
-    region1 = [(landmarks_head.part(points_list[0]).x + add_width_to_points,
-                landmarks_head.part(points_list[0]).y)]
-    region2 = [(landmarks_head.part(points_list[-1]).x + add_width_to_points,
-                landmarks_head.part(points_list[-1]).y)]
+        self.landmarks_head = landmarks_head
+        self.picture = picture
+        self.head_box_head = head_box_head
+        self.points_list = points_list
+        self.adding_height = adding_height
+        self.add_width = add_width
 
-    #Make one list
-    region1 += region
-    region1 += region2
+    @classmethod
+    def raising_part(cls, landmarks_head, picture, head_box_head, points_list, adding_height, add_width):
+        """Put white on region interest on a gray picture"""
 
-    #Transfor points into array
-    region = np.array(region1)
-    #Fill the region in white color on a gray picture
-    cv2.fillPoly(picture, [region], (255, 255, 255))
+        #Add height px of our y points.
+        width, height = head_box_head[2:]
+        add_height_to_points = int(height * adding_height)
+        add_width_to_points = int(width * add_width)
+        
+        #Recuperate landmarks 1:-1
+        region = [(landmarks_head.part(n).x, landmarks_head.part(n).y - add_height_to_points)
+                  for n in points_list[1: -1]]
+
+        #First and last landmark (for hide on eyes)
+        region1 = [(landmarks_head.part(points_list[0]).x + add_width_to_points,
+                    landmarks_head.part(points_list[0]).y)]
+        region2 = [(landmarks_head.part(points_list[-1]).x + add_width_to_points,
+                    landmarks_head.part(points_list[-1]).y)]
+
+        #Make one list
+        region1 += region
+        region1 += region2
+
+        #Transfor points into array
+        region = np.array(region1)
+        #Fill the region in white color on a gray picture
+        cv2.fillPoly(picture, [region], (255, 255, 255))
 
 
 
 
+
+
+
+
+#Our landmarks points.
+on_left_eye  = [17, 18, 19, 20, 21]
+on_right_eye = [22, 23, 24, 25, 26]
+mouse     = [21, 6, 10, 22]
+left_eye  = [36, 37, 38, 39, 40, 41]
+right_eye = [42, 43, 44, 45, 46, 47]
 
 def raising(landmarks, th, th1, head_box):
 
@@ -254,6 +319,13 @@ def raising(landmarks, th, th1, head_box):
     mouse     = [21, 6, 10, 22]
     left_eye  = [36, 37, 38, 39, 40, 41]
     right_eye = [42, 43, 44, 45, 46, 47]
+
+    #global on_left_eye
+
+    #raising_on_eyes1 = Raise_region(landmarks, th, head_box, on_left_eye, 0.055, 0))
+    #aa = TH(target=raising_on_eyes1)
+    ##aa.start()
+    ##aa.join()
 
     #Call raising function from thead functions
     raising_on_eyes1 = TH(target=raising_part(landmarks, th, head_box, on_left_eye, 0.055, 0))# 5 91
