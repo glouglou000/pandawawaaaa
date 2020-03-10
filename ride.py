@@ -19,16 +19,12 @@ from scipy.spatial import distance as dist
 
 
 
-from figure.wrinkle.ride_utils import raising_part
-from figure.wrinkle.ride_utils import wrinkle_function
 from figure.wrinkle.ride_utils import skin_detector
 from figure.wrinkle.ride_utils import raising
+from figure.wrinkle.ride_utils import MakeArea
+from figure.wrinkle.ride_utils import detect_wringle
 
 
-
-from figure.wrinkle.ride_utils import recuperate_coordinates
-from figure.wrinkle.ride_utils import masks_from_convex
-from figure.wrinkle.ride_utils import localisation_wrinkle
 
 
 
@@ -74,209 +70,6 @@ cap = cv2.VideoCapture(video)
 #face_division = search_video_size(video, predictor, detector, dlib_model, 93)
 #face_division = 2.899999999999998
 face_division = 1.650000000000001
-
-
-
-
-def wrinkle_crow_feet(zero):
-
-    """
-    Dection of the wrinkle situate on the side of the eye.
-    Define region interest from landmarks and feature requiered
-
-    data_points's composed by: incrementation of region and landmarks
-    coordinates
-
-    After we call 2 thread for the two eyes wrinkles.
-
-    """
-
-    #Landmarks region of the wrinkle interest.
-    data_points_crow_right = ( ( (0, 0), (0, 0), (0, 0) ), ( (36, 37), (17, 37), (36, 31), (0, 17)  ) )
-    data_points_crow_left  = ( ( (0, 0), (0, 0), (0, 0) ), ( (45, 44), (26, 44), (45, 35), (16, 26) ) )
-
-    #Features required for have a wrinkle.
-    data_feature_crow      = (0.8, 0.003, 0.26 , zero, 0.28, zero)
-
-
-    #Right side.
-
-    """
-    We need the head_box_head for estimate feature,
-    data_points_crow_right for localise the area of wrinkle,
-    data_feature_crow for define the wrinkle,
-    landmarks_head for obtain coordinates,
-    frame_head for displaying the wrinkle on the frame,
-    threshold for have the threshold,
-    mode 1 here's middle where we make a mean of 2 landmarks,
-    length_or_width's the second mode for define condition of features dimention,
-    and the number, here 4 for define how wrinkle we need for say wrinkles appear.
-    """
-
-    #aa = Detection(head_box_head, data_points_crow_right,
-                                    #data_feature_crow, landmarks_head,
-                                    #frame_head, threshold, "middle", "length_or_width", 4))
-    #aa.wrinkle_function()
-    #ab = TH(target=aa)
-    ##ab.start()
-    ##ab.join()
-    
-    t1 = TH(target=wrinkle_function(head_box_head, data_points_crow_right,
-                                    data_feature_crow, landmarks_head,
-                                    frame_head, threshold, "middle", "length_or_width", 4))
-
-    #Left side.
-    t2 = TH(target=wrinkle_function(head_box_head, data_points_crow_left, data_feature_crow,
-                                     landmarks_head, frame_head, threshold,
-                                    "middle", "length_or_width", 4))
-
-    t1.start()
-    t2.start()
-
-    t1.join()
-    t2.join()
-    
-
-def wrinkle_beetween_eye(zero, width_head, height_head):
-    """
-    Dection of the wrinkle situate beetween the eyes.
-    Define region interest from landmarks and feature requiered
-
-    data_points's composed by: incrementation of region and landmarks
-    coordinates
-
-    After we call 2 thread for the two sides.
-
-
-    For have region of wrinkle, we increment region in comparaison of
-    the head box measure.
-
-    We define the wrinkle feature from the length method. We
-    search the length wrinkle > width wrinkle.
-    for have a form like "l l"
-    """
-
-
-    #Beetween eyes.
-    adding_height = int(height_head * 0.09)   #5 de 74
-    adding_width  = int(width_head  * 0.015)  #1 de 90
-
-    data_points_beetween_eye = ( ( (-adding_width, -adding_height), (adding_width, -adding_height),
-                                   (0, -adding_height) ), ( (21, 21), (22, 22), (27, 27) ))
-
-    data_feature_beetween_eye = (0.5, 0.075, zero, 100000, zero, zero)
-    t1 = TH(target=wrinkle_function(head_box_head, data_points_beetween_eye, data_feature_beetween_eye,
-                     landmarks_head, frame_head, threshold, "", "length", 2))
-
-    t1.start()
-    t1.join()
-
-
-
-def wrinkle_side_mouth(zero, width_head):
-
-    """
-    Dection of the wrinkle situate beetween the nose and the mouse.
-    Define region interest from landmarks and feature requiered
-
-    data_points's composed by: incrementation of region and landmarks
-    coordinates
-
-    After we call 2 thread for the two sides.
-
-    For have region of wrinkle, we increment region in comparaison of
-    the width head box measure.
-
-    Here we use the method lengthWidth who's define wrinkle
-    in function of length and width feature.
-
-    """
-
-
-    #side mouth
-    add1 = int(width_head * 0.12) # 10 de 87 x1
-    add2 = int(width_head * 0.18) # 15 de 87 x2
-
-    data_points_side_mouth_right = ( ( (add1, 0), (-add2, 0), (-add2, 0) ), ( (30, 30), (14, 14), (12, 12)) )
-    data_points_side_mouth_left  = ( ( (-add1, 0), (add2, 0), (add2, 0)  ), ( (30, 30), (2, 2), (4, 4) ) )
-
-    data_feature_side_mouth      = (0.8, 0.008, 0.26, 10000, int(width_head * 0.08), 10000)
-
-    #right.
-    t1 = TH(target=wrinkle_function(head_box_head, data_points_side_mouth_right, data_feature_side_mouth,
-                     landmarks_head, frame_head, threshold, "", "lengthWidth", 0))
-    #left.
-    t2 = TH(target=wrinkle_function(head_box_head, data_points_side_mouth_left, data_feature_side_mouth,
-                     landmarks_head, frame_head, threshold, "", "lengthWidth", 0))
-
-    t1.start()
-    t2.start()
-
-    t1.join()
-    t2.join()
-
-
-
-def wrinkle_under_eye(zero, height_head):
-
-    """
-    Dection of the wrinkle situate under the eyes.
-    Define region interest from landmarks and feature requiered
-
-    data_points's composed by: incrementation of region and landmarks
-    coordinates
-
-    After we call 2 thread for the two sides.
-
-    """
-
-
-
-
-    add_height = int(height_head * 0.1) #8 de 85
-
-    #under
-    data_points_under_eye_left  = (((0, add_height), (0, add_height),
-                                   (0, 2 * add_height), (0, 2 * add_height)),
-                                   ((36, 36), (39, 39), (36, 36), (39, 39)))
-
-    data_points_under_eye_right = (((0, add_height), (0, add_height),
-                                   (add_height, 2 * add_height), (0, 2 * add_height)),
-                                   ((42, 42), (45, 45), (42, 42), (45, 45)))
-
-    data_feature_under_eyes  = (0.8, 0.05, zero, zero, zero, zero)
-
-    #left.
-    t1 = TH(target=wrinkle_function(head_box_head, data_points_under_eye_left, data_feature_under_eyes,
-                     landmarks_head, frame_head, threshold, "", "left", 0))
-    #right.
-    t2 = TH(target=wrinkle_function(head_box_head, data_points_under_eye_right, data_feature_under_eyes,
-                     landmarks_head, frame_head, threshold, "", "right", 0))
-
-    t1.start()
-    t2.start()
-
-    t1.join()
-    t2.join()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -333,7 +126,6 @@ def landmarks81(gray_head, predictor1, detector1):
 
 
 
-
 while True:
 
     _, frame = cap.read()
@@ -367,47 +159,13 @@ while True:
         filter2.join()
 
 
+        _, _, width_head, height_head = head_box_head
+        _, _, width_head1, height_head1 = head_box_head1
+
 
         #Raising part
         raising(landmarks_head, threshold, threshold1, head_box_head)
-
-
- 
-        zero = 0
-        _, _, width_head, height_head = head_box_head
-
-##        th_wrinkle_crow = TH(target=wrinkle_crow_feet(zero))
-##        th_beetween     = TH(target=wrinkle_beetween_eye(zero, width_head, height_head))
-        th_side_mouth   = TH(target=wrinkle_side_mouth(zero, width_head))
-##        th_under_eyes   = TH(target=wrinkle_under_eye(zero, height_head))
-##
-##
-##        th_wrinkle_crow.start()
-##        th_beetween.start()
-        th_side_mouth.start()
-##        th_under_eyes.start()
-##
-##        th_wrinkle_crow.join()
-##        th_beetween.join()
-        th_side_mouth.join()
-##        th_under_eyes.join()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        detect_wringle(width_head, height_head, landmarks_head, frame_head, threshold)
 
 
 
@@ -451,9 +209,9 @@ while True:
 
 
 
-
+    
     cv2.imshow("frame_head", frame_head)
-    if cv2.waitKey(0) & 0xFF == ord('q'):
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 
